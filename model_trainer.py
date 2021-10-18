@@ -24,8 +24,11 @@ import os
 # initializing the initial learning rate, number of epochs to train for,
 # and batch size
 ini_lrn_rt = 0.0001
-epochs = 20
+#epochs = 20  #ideal no of epochs for best accuracy
 batch_size = 32
+
+print("Enter the number epochs to be done", "integer input only", sep="\n", end="\n")
+epochs = int(input())  #should be within 10-20 as less than 10 would cause a significant loss in accuracy, and greater than 20 does not cause a significant increase in accuracy
 
 # dataset dir
 dirs = r"D:\Sparks Foundation Internship Work\Project_2\Face_mask_detector\dataset_img_msk"
@@ -67,8 +70,7 @@ baseModel = MobileNetV2(weights="imagenet", include_top=False, input_tensor=Inpu
 headModel = baseModel.output
 headModel = AveragePooling2D(pool_size=(7, 7))(headModel)
 headModel = Flatten(name="flatten")(headModel)
-headModel = Dense(128, activation="relu")(
-    headModel)  # adding a dense layer of 128 perceptrons, "relu" as the use case is non linear
+headModel = Dense(128, activation="relu")(headModel)  # adding a dense layer of 128 perceptrons, "relu" as the use case is non linear
 headModel = Dropout(0.5)(headModel)  # to avoid overfitting of the model
 headModel = Dense(2, activation="softmax")(headModel)  # "softmax" activation as the classification is binary
 
@@ -88,29 +90,27 @@ model.compile(loss="binary_crossentropy", optimizer=opt, metrics=["accuracy"])
 #model fitting
 
 # train the head of the network
-print("training head...")
+print("training head of model", end="\n")
 H = model.fit(aug.flow(trainX, trainY, batch_size=batch_size), steps_per_epoch=len(trainX) // batch_size, validation_data=(testX, testY), validation_steps=len(testX) // batch_size, epochs=epochs)
 
 # make predictions on the testing set
-print("evaluating network...")
+print("evaluating the network", end="\n")
 predIdxs = model.predict(testX, batch_size=batch_size)
-
-
-# for each image in the testing set we need to find the index of the
-# label with corresponding largest predicted probability
 predIdxs = np.argmax(predIdxs, axis=1)
 
 
 #classification report
+print("Displaying Classification report: ", end="\n")
 print(classification_report(testY.argmax(axis=1), predIdxs, target_names=l_b.classes_))
 
 
-# serialize the model to disk
-print("saving mask detector model...")
-model.save("mask_detector.model", save_format="h5")
+print("saving mask detector model...", end="\n")
+model.save("mask_detector_final.model", save_format="h5")
 
 
 # plotting the training loss and accuracy
+print("Plotting the training loss and accuracy and saving it", end="\n")
+
 N = epochs
 plt.style.use("ggplot")
 plt.figure()
@@ -119,7 +119,9 @@ plt.plot(np.arange(0, N), H.history["val_loss"], label="val_loss")
 plt.plot(np.arange(0, N), H.history["accuracy"], label="train_acc")
 plt.plot(np.arange(0, N), H.history["val_accuracy"], label="val_acc")
 plt.title("Training Loss and Accuracy")
-plt.xlabel("Epoch #")
+plt.xlabel("Epoch")
 plt.ylabel("Loss/Accuracy")
 plt.legend(loc="lower left")
-plt.savefig("plot.png")
+plt.savefig("plot_model_accuracy.png")
+
+print("Code finished, model ready")
