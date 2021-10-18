@@ -1,12 +1,8 @@
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.models import load_model
-from imutils.video import VideoStream
 import numpy as np
-import imutils
-import time
 import cv2
-import os
 import sys
 
 #loading models
@@ -25,7 +21,7 @@ def face_mask_detector(frm, faceNet, maskNet):
     # passing the blob through the network and obtaining the face detections
     faceNet.setInput(blob)
     detections = faceNet.forward()
-    print(detections.shape)
+    #print(detections.shape)
 
     faces = []
     locations = []
@@ -64,39 +60,99 @@ def face_mask_detector(frm, faceNet, maskNet):
     # locations
     return locations, predictions
 
-capture = cv2.VideoCapture(0)
-capture.set(4, 400)
+def rescale_frame(frame, scale):
+    width = int(frame.shape[1] * scale)
+    height = int(frame.shape[0] * scale)
+    dimensions = (width, height)
+    return cv2.resize(frame, dimensions)
 
-print("Starting VideoCapture, press 'E' to stop", end='\n')
+print("...Specify if face mask is to be detected in a image or video or live webcam feed...", "1. Still Image(press 1)",
+      "2. Video Feed(press 2)", "3. Live Webcam feed(press 3)", "....Enter option number(integer)....", sep="\n", end="\n")
 
-while True:
-    ret, frm = capture.read()
-    if ret is False:
-        print("Video not provided, exitting program")
-        break
-    locations, predictions = face_mask_detector(frm, face_model, mask_model)
+i = int(input())
+
+if i == 1:
+    print("Enter complete image path: ")
+    paths = input()
+    img = cv2.imread(paths)
+
+    print("...press 'E' to exit process...")
+
+    locations, predictions = face_mask_detector(img, face_model, mask_model)
 
     for (box, pred) in zip(locations, predictions):
-
         (startX, startY, endX, endY) = box
         (mask, withoutMask) = pred
 
-        label = "Mask Worn" if mask > withoutMask else "No Mask Worn"
-        color = (255, 0, 0) if label == "Mask" else (0, 0, 255)
+        if mask > withoutMask:
+            label = "Mask Worn"
+            colour = (0, 255, 0)
+        else:
+            label = "Mask not Worn"
+            colour = (0, 0, 255)
 
         # including the probability in the label
         label = "{}: {:.2f}%".format(label, max(mask, withoutMask) * 100)
 
-        cv2.putText(frm, label, (startX, startY - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-        cv2.rectangle(frm, (startX, startY), (endX, endY), color, 3)
+        cv2.putText(img, label, (startX, startY - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 2)
+        cv2.rectangle(img, (startX, startY), (endX, endY), colour, 3)
 
-    cv2.imshow("final_display", frm)
+    cv2.imshow("final_display", img)
 
-    #exit sequence
-    if cv2.waitKey(1) & 0xff == ord('e'):
+    # exit sequence
+    if cv2.waitKey(0) & 0xff == ord('e'):
         print("...Exitting program...", end="\n")
-        break
+        cv2.destroyAllWindows()
+        sys.exit()
 
-capture.release()
-cv2.destroyAllWindows()
-sys.exit()
+
+elif i == 2 or i == 3:
+
+    if i == 2:
+        print("Enter full path to video file")
+        paths = input()
+    else:
+        paths = 0
+
+    capture = cv2.VideoCapture(paths)
+
+    print("Starting VideoCapture, press 'E' to stop", end='\n')
+
+    while True:
+        ret, frm = capture.read()
+        if ret is False:
+            print("Video not provided, exitting program")
+            break
+        locations, predictions = face_mask_detector(frm, face_model, mask_model)
+
+        for (box, pred) in zip(locations, predictions):
+            (startX, startY, endX, endY) = box
+            (mask, withoutMask) = pred
+
+            if mask > withoutMask:
+                label = "Mask Worn"
+                colour = (0, 255, 0)
+            else:
+                label = "Mask not Worn"
+                colour = (0, 0, 255)
+
+            # including the probability in the label
+            label = "{}: {:.2f}%".format(label, max(mask, withoutMask) * 100)
+
+            cv2.putText(frm, label, (startX, startY - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, colour, 2)
+            cv2.rectangle(frm, (startX, startY), (endX, endY), colour, 3)
+
+        cv2.imshow("final_display", frm)
+
+        # exit sequence
+        if cv2.waitKey(1) & 0xff == ord('e'):
+            print("...Exitting program...", end="\n")
+            break
+
+    capture.release()
+    cv2.destroyAllWindows()
+    sys.exit()
+
+else:
+    print("...Wrong input given, rerun and try again...")
+    sys.exit()
