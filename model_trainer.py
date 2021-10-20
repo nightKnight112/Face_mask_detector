@@ -63,7 +63,7 @@ aug = ImageDataGenerator(rotation_range=20, zoom_range=0.15, width_shift_range=0
 
 
 # modelling part
-# pre-trained model "imagenet" used as baseModel
+# pre-trained dataset "imagenet" used in baseModel
 
 baseModel = MobileNetV2(weights="imagenet", include_top=False, input_tensor=Input(shape=(224, 224, 3)))
 
